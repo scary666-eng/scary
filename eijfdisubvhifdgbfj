@@ -6817,6 +6817,102 @@ do
         end
     })
 end
+MiscTab:Space()
+MiscTab:Section({
+    Title = "Hamon",
+})
+do
+    local VirtualInputManager = game:GetService("VirtualInputManager")
+    local UserInputService = game:GetService("UserInputService")
+    getgenv().player = game.Players.LocalPlayer
+
+    getgenv().AutoHamonCharge = getgenv().AutoHamonCharge or false
+    getgenv().AutoHamonChargeToken = getgenv().AutoHamonChargeToken or 0
+
+    getgenv().getCharacter = function()
+        return player.Character or player.CharacterAdded:Wait()
+    end
+
+    getgenv().safeInvoke = function(remoteFunc, method, args)
+        local ok, result = pcall(function()
+            return remoteFunc:InvokeServer(method, args)
+        end)
+        return ok, result
+    end
+
+    getgenv().ensureInhaleBind = function()
+        local char = getCharacter()
+        local remoteFunc = char and char:FindFirstChild("RemoteFunction")
+        if not remoteFunc then return end
+
+        local info
+        local ok, result = safeInvoke(remoteFunc, "ReturnSkillInfoInTree", {
+            Type = "Character",
+            Skills = { [19] = "Inhale" },
+        })
+        if ok then info = result end
+
+        if not info or not info.Inhale then
+            local ok2, result2 = safeInvoke(remoteFunc, "ReturnSkillInfoInTree", {
+                Type = "Stand",
+                Skills = { [19] = "Inhale" },
+            })
+            if ok2 then info = result2 end
+        end
+
+        if info and info.Inhale and info.Inhale.AssignedKey ~= "L" then
+            pcall(function()
+                remoteFunc:InvokeServer("AssignSkillKey", {
+                    Type = "Character",
+                    Key = "Enum.KeyCode.L",
+                    Skill = "Inhale",
+                })
+            end)
+            pcall(function()
+                remoteFunc:InvokeServer("AssignSkillKey", {
+                    Type = "Stand",
+                    Key = "Enum.KeyCode.L",
+                    Skill = "Inhale",
+                })
+            end)
+        end
+    end
+
+    getgenv().chargeOnce = function()
+        if UserInputService:GetFocusedTextBox() then return end
+        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.L, false, game)
+        task.wait(0.35)
+        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.L, false, game)
+    end
+
+    MiscTab:Toggle({
+        Flag = "HamonCharge",
+        Title = "Auto Hamon Charge",
+        Default = false,
+        Callback = function(state)
+            getgenv().AutoHamonCharge = state
+            getgenv().AutoHamonChargeToken = getgenv().AutoHamonChargeToken + 1
+            local myToken = getgenv().AutoHamonChargeToken
+
+            if state then
+                notify("YBA Script", "Auto Hamon Charge enabled.")
+                task.spawn(function()
+                    while getgenv().AutoHamonCharge and myToken == getgenv().AutoHamonChargeToken do
+                        local char = player.Character
+                        local hum = char and char:FindFirstChildWhichIsA("Humanoid")
+                        if char and hum and hum.Health > 0 then
+                            ensureInhaleBind()
+                            chargeOnce()
+                        end
+                        task.wait(0.8)
+                    end
+                end)
+            else
+                notify("YBA Script", "Auto Hamon Charge disabled.")
+            end
+        end,
+    })
+end
 MiscTab:Section({
     Title = "Walkspeed Modifier",
 })
