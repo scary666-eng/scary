@@ -11,16 +11,11 @@ do
         WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/weatherwess-lgtm/Azure/refs/heads/main/Gofile"))()
     end
 end
-WindUI:Popup({
-    Title = "Welcome",
-    Icon = "star",
-    Content = "vanta.dev lite",
-    Buttons = {
-        {
-            Title = "Ok",
-            Icon = "check",
-        }
-    }
+WindUI:Notify({
+    Title = "vanta.lite loading...",
+    Content = "made by scrilisk and kazakori",
+    Duration = 3, -- 3 seconds
+    Icon = "server-cog",
 })
 setclipboard("https://discord.gg/DV9xRuMHu")
 loadstring(game:HttpGet("https://raw.githubusercontent.com/weatherwess-lgtm/FlyToggle/refs/heads/main/Clipboard"))()
@@ -49,7 +44,7 @@ local Window = WindUI:CreateWindow({
 })
 pcall(function()
     WindUI:AddTheme({
-    Name = "My Theme", -- theme name
+    Name = "scrilisk theme", -- theme name
     
     
     Accent = Color3.fromHex("#18181b"),
@@ -60,7 +55,22 @@ pcall(function()
     Button = Color3.fromHex("#e61461"),
     Icon = Color3.fromHex("#fc027f"),
 })
-WindUI:SetTheme("My Theme")
+WindUI:AddTheme({
+    Name = "kazakori theme", -- theme name
+    
+    -- example of gradient (available for all values. e.g. Button, Icon, Text...)   --
+    Accent = WindUI:Gradient({                                                      
+        ["0"] = { Color = Color3.fromHex("#f4f4f6"), Transparency = 0 }, 
+        ["25"]  = { Color = Color3.fromHex("#a9a8a8"), Transparency = 0 },        
+        ["50"]  = { Color = Color3.fromHex("#5f5f5f"), Transparency = 0 },        
+        ["75"]  = { Color = Color3.fromHex("#252525"), Transparency = 0 },
+        ["100"]   = { Color = Color3.fromHex("#1b1b1d"), Transparency = 0 },        
+    }, {                                                                            
+        Rotation = 270,                                                               
+    }),                                                                             
+    
+})
+WindUI:SetTheme("kazakori theme")
 end)
 Window:SetToggleKey(Enum.KeyCode.K)
 local function parseJSON(luau_table, indent, level, visited)
@@ -3638,6 +3648,17 @@ SettingsSection:Toggle({
         Util:SetState("Keep any shiny", State)
     end
 })
+
+SettingsTab:Dropdown({
+    Flag = "Theme Selector",
+    Title = "Theme Selector",
+    Default = "scrilisk theme",
+    Values = {"scrilisk theme", "kazakori theme"},
+    Callback = function(selected)
+        WindUI:SetTheme(selected)
+    end
+})
+
 
 local StandFarmSection = StandFarmTab:Section({
     Title = "Stand Farm"
