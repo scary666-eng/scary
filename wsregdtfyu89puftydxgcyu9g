@@ -206,6 +206,7 @@ local FarmingTab = Window:Tab({ Title = "Farming", Icon = "craft:macbook-stroke"
 local StandFarmTab = Window:Tab({ Title = "StandFarm", Icon = "target" })
 local SBRTab = Window:Tab({ Title = "SBR", Icon = "chess-knight" })
 local SellingTab = Window:Tab({ Title = "Selling", Icon = "dollar-sign" })
+local PurchaseTab = Window:Tab({ Title = "Purchase", Icon = "shopping-cart" })
 local VisualTab = Window:Tab({ Title = "Visual", Icon = "eye" })
 local AdjustTab = Window:Tab({ Title = "Adjust", Icon = "sliders-horizontal" })
 local MiscTab = Window:Tab({ Title = "Misc", Icon = "zap" })
@@ -1118,23 +1119,46 @@ FarmingTab:Button({
     Flag = "SelectAllItems",
     Title = "Select All Items",
     Callback = function()
-        -- copy all options into a fresh array
-        local all = {}
-        for i, name in ipairs(itemOptions) do
-            all[i] = name
-        end
+        local all = table.clone(itemOptions)
         selectedFarmItems = all
 
-        -- try to update dropdown visual state (safe, optional)
+        -- force both value + UI sync for the FarmItem dropdown
+        local synced = false
+
+        -- common WindUI setter (if available)
         pcall(function()
-            if Window and Window.Flags and Window.Flags.FarmItem and Window.Flags.FarmItem.Set then
-                Window.Flags.FarmItem:Set(all)
+            if Window and Window.SetFlag then
+                Window:SetFlag("FarmItem", all)
+                synced = true
             end
         end)
 
+        -- fallback: flag object setter
+        pcall(function()
+            local f = Window and Window.Flags and Window.Flags.FarmItem
+            if type(f) == "table" then
+                if type(f.Set) == "function" then
+                    f:Set(all)
+                    synced = true
+                elseif type(f.SetValue) == "function" then
+                    f:SetValue(all)
+                    synced = true
+                end
+            end
+        end)
+
+        -- final fallback: raw flag value
+        if not synced then
+            pcall(function()
+                if Window and Window.Flags then
+                    Window.Flags.FarmItem = all
+                end
+            end)
+        end
+
         WindUI:Notify({
             Title = "YBA Script",
-            Content = ("Selected all %d farm items."):format(#selectedFarmItems),
+            Content = ("Selected all %d farm items."):format(#all),
             Duration = 3
         })
     end
@@ -1303,6 +1327,48 @@ else
             notify("YBA Script", "Auto Sell Selected disabled.")
 end
 end
+})
+SellingTab:Button({
+    Title = "Select all for Auto Sell",
+    Callback = function()
+        local all = table.clone(itemOptions)
+        selectedAutoSellItems = all
+        -- force both value + UI sync for the AutoSellItems dropdown
+        local synced = false
+        -- common WindUI setter (if available)
+        pcall(function()
+            if Window and Window.SetFlag then
+                Window:SetFlag("AutoSellItems", all)
+                synced = true
+            end
+        end)
+        -- fallback: flag object setter
+        pcall(function()
+            local f = Window and Window.Flags and Window.Flags.AutoSellItems
+            if type(f) == "table" then
+                if type(f.Set) == "function" then
+                    f:Set(all)
+                    synced = true
+                elseif type(f.SetValue) == "function" then
+                    f:SetValue(all)
+                    synced = true
+                end
+            end
+        end)
+        -- final fallback: raw flag value
+        if not synced then
+            pcall(function()
+                if Window and Window.Flags then 
+                    Window.Flags.AutoSellItems = all
+                end
+            end)
+        end
+        WindUI:Notify({
+            Title = "YBA Script",
+            Content = ("Selected all %d items for Auto Sell."):format(#all),
+            Duration = 3
+        })
+    end
 })
 SellingTab:Space()
 SellingTab:Dropdown({
@@ -1893,6 +1959,211 @@ MiscTab:Slider({
         Util:SetInt("InfDelay", math.clamp(Value, 0, 3.5))
     end
 })
+
+-- Use a dedicated section as the container for interactive controls
+getgenv().PurchaseSection = PurchaseTab:Section({
+    Title = "Purchase Items"
+})
+
+PurchaseTab:Section({
+    Title = "Buy Max Of (1 purchase/sec, prefers 5x when available):",
+})
+
+-- Uses PurchaseShopItem routing (same style as your working Pure Rokakaka example)
+getgenv().purchaseData = {
+    ["Lucky Arrow"] = {
+        one  = {ItemName = "1x Lucky Arrow", ShopPage = 1, ShopSlot = 1},
+    },
+    ["Mysterious Arrow"] = {
+        five = {ItemName = "5x Mysterious Arrow", ShopPage = 1, ShopSlot = 4},
+        one  = {ItemName = "1x Mysterious Arrow", ShopPage = 1, ShopSlot = 3},
+    },
+    ["Rokakaka"] = {
+        five = {ItemName = "5x Rokakaka", ShopPage = 1, ShopSlot = 6},
+        one  = {ItemName = "1x Rokakaka", ShopPage = 1, ShopSlot = 5},
+    },
+    ["Dio's Diary"] = {
+        one  = {ItemName = "1x Dio's Diary", ShopPage = 1, ShopSlot = 8},
+    },
+    ["Heart of The Saint's Corpse"] = {
+        one  = {ItemName = "1x Heart of The Saint's Corpse", ShopPage = 1, ShopSlot = 9},
+    },
+    ["Pelvis of The Saint's Corpse"] = {
+        one  = {ItemName = "1x Pelvis of The Saint's Corpse", ShopPage = 1, ShopSlot = 10},
+    },
+    ["Left Arm of the Saint's Corpse"] = {
+        one  = {ItemName = "1x Left Arm of the Saint's Corpse", ShopPage = 1, ShopSlot = 11},
+    },
+    ["Rib Cage of The Saint's Corpse"] = {
+        five = {ItemName = "5x Rib Cage of The Saint's Corpse", ShopPage = 1, ShopSlot = 13},
+        one  = {ItemName = "1x Rib Cage of The Saint's Corpse", ShopPage = 1, ShopSlot = 12},
+    },
+    ["Pure Rokakaka"] = {
+        one  = {ItemName = "1x Pure Rokakaka", ShopPage = 1, ShopSlot = 2},
+    },
+}
+
+getgenv().purchasableItems = {}
+for k in pairs(getgenv().purchaseData) do
+    table.insert(getgenv().purchasableItems, k)
+end
+table.sort(getgenv().purchasableItems)
+
+getgenv().selectedPurchaseItems = getgenv().selectedPurchaseItems or {}
+getgenv().purchaseRunning = getgenv().purchaseRunning or false
+getgenv().fallbackCaps = getgenv().fallbackCaps or {
+    ["Heart of The Saint's Corpse"] = 10,
+    ["Pelvis of The Saint's Corpse"] = 10,
+    ["Left Arm of the Saint's Corpse"] = 10,
+}
+
+getgenv().normalizeMultiSelection = function(selected)
+    getgenv().out = {}
+    if type(selected) ~= "table" then
+        return getgenv().out
+    end
+
+    if #selected > 0 then
+        for _, v in ipairs(selected) do
+            if type(v) == "string" then
+                table.insert(getgenv().out, v)
+            end
+        end
+    else
+        for k, v in pairs(selected) do
+            if v == true and type(k) == "string" then
+                table.insert(getgenv().out, k)
+            elseif type(k) == "number" and type(v) == "string" then
+                table.insert(getgenv().out, v)
+            end
+        end
+    end
+
+    table.sort(getgenv().out)
+    return getgenv().out
+end
+
+getgenv().PurchaseSection:Dropdown({
+    Flag = "PurchaseItems",
+    Title = "Select Purchasable Items",
+    Values = getgenv().purchasableItems,
+    Multi = true,
+    Callback = function(selected)
+        getgenv().selectedPurchaseItems = getgenv().normalizeMultiSelection(selected)
+    end
+})
+
+getgenv().getItemCount = function(itemName)
+    getgenv().count = 0
+    for _, v in ipairs(player.Backpack:GetChildren()) do
+        if v.Name == itemName then
+            getgenv().count = getgenv().count + 1
+        end
+    end
+    if player.Character then
+        for _, v in ipairs(player.Character:GetChildren()) do
+            if v.Name == itemName then
+                getgenv().count = getgenv().count + 1
+            end
+        end
+    end
+    return getgenv().count
+end
+
+getgenv().getPurchaseRemote = function()
+    if player.Character and player.Character:FindFirstChild("RemoteEvent") and player.Character.RemoteEvent:IsA("RemoteEvent") then
+        return player.Character.RemoteEvent
+    end
+    return nil
+end
+
+getgenv().buyAction = function(itemName, action)
+    if not action then
+        return false, 0
+    end
+
+    getgenv().remote = getgenv().getPurchaseRemote()
+    if not getgenv().remote then
+        return false, 0
+    end
+
+    getgenv().before = getgenv().getItemCount(itemName)
+
+    pcall(function()
+        getgenv().remote:FireServer("PurchaseShopItem", {["ItemName"] = action.ItemName}, action.ShopPage, action.ShopSlot)
+    end)
+
+    task.wait(0.2)
+
+    getgenv().after = getgenv().getItemCount(itemName)
+    getgenv().gain = math.max(0, getgenv().after - getgenv().before)
+    return getgenv().gain > 0, getgenv().gain
+end
+
+getgenv().PurchaseSection:Button({
+    Title = "Buy Max of Selected",
+    Callback = function()
+        if getgenv().purchaseRunning then
+            notify("YBA Script", "Purchase already running.")
+            return
+        end
+
+        if #getgenv().selectedPurchaseItems == 0 then
+            notify("YBA Script", "No purchase items selected.")
+            return
+        end
+
+        getgenv().purchaseRunning = true
+        getgenv().summary = {}
+
+        for _, itemName in ipairs(getgenv().selectedPurchaseItems) do
+            getgenv().cfg = getgenv().purchaseData[itemName]
+            if not getgenv().cfg then
+                table.insert(getgenv().summary, itemName .. ": skipped (no config)")
+                continue
+            end
+
+            -- Uses your script's max table first
+            getgenv().maxAmount = (maxLimits and maxLimits[itemName]) or getgenv().fallbackCaps[itemName] or 25
+            getgenv().totalBought = 0
+            getgenv().stalls = 0
+
+            while getgenv().getItemCount(itemName) < getgenv().maxAmount do
+                getgenv().current = getgenv().getItemCount(itemName)
+                getgenv().needed = getgenv().maxAmount - getgenv().current
+                getgenv().success = false
+                getgenv().gain = 0
+
+                if getgenv().cfg.five and getgenv().needed >= 5 then
+                    getgenv().success, getgenv().gain = getgenv().buyAction(itemName, getgenv().cfg.five)
+                end
+
+                if (not getgenv().success) and getgenv().cfg.one then
+                    getgenv().success, getgenv().gain = getgenv().buyAction(itemName, getgenv().cfg.one)
+                end
+
+                if getgenv().success then
+                    getgenv().totalBought = getgenv().totalBought + getgenv().gain
+                    getgenv().stalls = 0
+                else
+                    getgenv().stalls = getgenv().stalls + 1
+                end
+
+                if getgenv().stalls >= 5 then
+                    break
+                end
+
+                task.wait(1)
+            end
+
+            table.insert(getgenv().summary, ("%s: %d/%d (+%d)"):format(itemName, getgenv().getItemCount(itemName), getgenv().maxAmount, getgenv().totalBought))
+        end
+
+        notify("YBA Script", "Purchase complete -> " .. table.concat(getgenv().summary, " | "))
+        getgenv().purchaseRunning = false
+    end
+})
+
 local LevelFarm = (function()
 -- YBA Level Farm - Standalone Version (No UI)
 -- Auto-farms quests based on your current level
@@ -3989,6 +4260,7 @@ task.spawn(function()
         end
     end
 end)
+
 Window:Notify({
     Title = "Stand Farming",
     Content = "Script loaded successfully!",
