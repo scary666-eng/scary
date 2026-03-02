@@ -1114,6 +1114,31 @@ FarmingTab:Dropdown({
         selectedFarmItems = selected
 end
 })
+FarmingTab:Button({
+    Flag = "SelectAllItems",
+    Title = "Select All Items",
+    Callback = function()
+        -- copy all options into a fresh array
+        local all = {}
+        for i, name in ipairs(itemOptions) do
+            all[i] = name
+        end
+        selectedFarmItems = all
+
+        -- try to update dropdown visual state (safe, optional)
+        pcall(function()
+            if Window and Window.Flags and Window.Flags.FarmItem and Window.Flags.FarmItem.Set then
+                Window.Flags.FarmItem:Set(all)
+            end
+        end)
+
+        WindUI:Notify({
+            Title = "YBA Script",
+            Content = ("Selected all %d farm items."):format(#selectedFarmItems),
+            Duration = 3
+        })
+    end
+})
 FarmingTab:Space()
 FarmingTab:Dropdown({
     Flag = "TravelMethod",
@@ -1579,7 +1604,7 @@ MiscTab:Dropdown({
             getgenv().AutoPressSpamDelay = v
         end
     })
-    
+
 
 MiscTab:Space()
 MiscTab:Section({
