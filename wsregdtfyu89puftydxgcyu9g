@@ -1550,6 +1550,129 @@ local soundNotifierToggle = MiscTab:Toggle({
     end
 })
 MiscTab:Space()
+MiscTab:Dropdown({
+        Flag = "AutoPressKeys",
+        Title = "Auto Press Keys for Block Breaker",
+        Values = { "None", "E", "Q", "R", "F", "G", "H", "T", "Y", "U", "I", "O", "P", "Z", "X", "C", "V", "B", "N", "M" },
+        Value = "None",
+        Callback = function(selected)
+            if selected == "None" then
+                getgenv().AutoPressKey = nil
+                notify("YBA Script", "Auto key spam disabled.")
+            else
+                getgenv().AutoPressKey = selected
+                notify("YBA Script", "Auto key spam set to: " .. selected)
+            end
+        end
+    })
+
+    MiscTab:Slider({
+        Flag = "AutoPressSpamDelay",
+        Title = "Key Spam Delay (sec)",
+        Step = 0.01,
+        Value = {
+            Min = 0.01,
+            Max = 0.5,
+            Default = 0.03
+        },
+        Callback = function(v)
+            getgenv().AutoPressSpamDelay = v
+        end
+    })
+    
+
+MiscTab:Space()
+MiscTab:Section({
+    Title = "Hamon",
+})
+do
+    getgenv().VIM = game:GetService("VirtualInputManager")
+    getgenv().UIS = game:GetService("UserInputService")
+
+    getgenv().AutoHamonCharge = getgenv().AutoHamonCharge or false
+    getgenv().AutoHamonChargeToken = getgenv().AutoHamonChargeToken or 0
+    getgenv().holdingL = getgenv().holdingL or false
+    getgenv().HamonRebindTick = getgenv().HamonRebindTick or 0
+    getgenv().HamonChargeInterval = getgenv().HamonChargeInterval or 7.5
+    getgenv().HamonHoldDuration = getgenv().HamonHoldDuration or 2.25
+    getgenv().HamonLastBind = getgenv().HamonLastBind or 0
+
+    getgenv().forceHamonBindL = function()
+        getgenv()._char = game.Players.LocalPlayer.Character
+        getgenv()._rf = getgenv()._char and getgenv()._char:FindFirstChild("RemoteFunction")
+        if not getgenv()._rf then return end
+
+        pcall(function()
+            getgenv()._rf:InvokeServer("AssignSkillKey", {
+                Type = "Character",
+                Key = "Enum.KeyCode.L",
+                Skill = "Hamon Breathing"
+            })
+        end)
+
+        pcall(function()
+            getgenv()._rf:InvokeServer("AssignSkillKey", {
+                Type = "Stand",
+                Key = "Enum.KeyCode.L",
+                Skill = "Hamon Breathing"
+            })
+        end)
+    end
+
+    getgenv().holdL = function()
+        if getgenv().holdingL or getgenv().UIS:GetFocusedTextBox() then return end
+        getgenv().VIM:SendKeyEvent(true, Enum.KeyCode.L, false, game)
+        getgenv().holdingL = true
+    end
+
+    getgenv().releaseL = function()
+        if not getgenv().holdingL then return end
+        getgenv().VIM:SendKeyEvent(false, Enum.KeyCode.L, false, game)
+        getgenv().holdingL = false
+    end
+
+    MiscTab:Toggle({
+        Flag = "HamonCharge",
+        Title = "Auto Hamon Charge",
+        Default = false,
+        Callback = function(state)
+            getgenv().AutoHamonCharge = state
+            getgenv().AutoHamonChargeToken = getgenv().AutoHamonChargeToken + 1
+            getgenv().AutoHamonChargeThreadToken = getgenv().AutoHamonChargeToken
+
+            if state then
+                getgenv().forceHamonBindL()
+                getgenv().HamonLastBind = tick()
+                notify("YBA Script", "Auto Hamon Charge enabled. Charging to max every 7.5s.")
+                task.spawn(function()
+                    while getgenv().AutoHamonCharge and getgenv().AutoHamonChargeThreadToken == getgenv().AutoHamonChargeToken do
+                        if game.Players.LocalPlayer.Character
+                            and game.Players.LocalPlayer.Character:FindFirstChildWhichIsA("Humanoid")
+                            and game.Players.LocalPlayer.Character:FindFirstChildWhichIsA("Humanoid").Health > 0 then
+
+                            if tick() - getgenv().HamonLastBind >= 10 then
+                                getgenv().forceHamonBindL()
+                                getgenv().HamonLastBind = tick()
+                            end
+
+                            getgenv().holdL()
+                            task.wait(getgenv().HamonHoldDuration)
+                            getgenv().releaseL()
+                            task.wait(getgenv().HamonChargeInterval)
+                        else
+                            getgenv().releaseL()
+                            task.wait(0.25)
+                        end
+                    end
+                    getgenv().releaseL()
+                end)
+            else
+                getgenv().releaseL()
+                notify("YBA Script", "Auto Hamon Charge disabled.")
+            end
+        end,
+    })
+end
 MiscTab:Button({
     Title = "Open Jesus Dialogue",
     Callback = function()
