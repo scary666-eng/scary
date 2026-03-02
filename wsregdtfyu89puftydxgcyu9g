@@ -70,6 +70,18 @@ WindUI:AddTheme({
     }),                                                                             
     
 })
+WindUI:AddTheme({
+    Name = "michaels theme", -- theme name
+    Accent = Color3.fromHex("#21b61e"),
+    Background = Color3.fromHex("#1d1d1d"), -- Accent
+    Outline = Color3.fromHex("#17cc35"),
+    Text = Color3.fromHex("#d6d6d6"),
+    Placeholder = Color3.fromHex("#252525"),
+    Button = Color3.fromHex("#14b84d"),
+    Icon = Color3.fromHex("#14e66f"),
+      Slider = Color3.fromHex("#3f9453"), -- Button
+    SliderThumb = Color3.fromHex("#07c339"), -- White
+})
 WindUI:SetTheme("kazakori theme")
 end)
 Window:SetToggleKey(Enum.KeyCode.K)
@@ -4072,7 +4084,7 @@ SettingsTab:Dropdown({
     Flag = "Theme Selector",
     Title = "Theme Selector",
     Default = "scrilisk theme",
-    Values = {"scrilisk theme", "kazakori theme"},
+    Values = {"scrilisk theme", "kazakori theme", "michaels theme"},
     Callback = function(selected)
         WindUI:SetTheme(selected)
     end
