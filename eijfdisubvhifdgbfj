@@ -73,6 +73,18 @@ local Window = WindUI:CreateWindow({
         )
     }
 })
+WindUI:AddTheme({
+    Name = "michaels theme", -- theme name
+    Accent = Color3.fromHex("#21b61e"),
+    Background = Color3.fromHex("#1d1d1d"), -- Accent
+    Outline = Color3.fromHex("#17cc35"),
+    Text = Color3.fromHex("#d6d6d6"),
+    Placeholder = Color3.fromHex("#252525"),
+    Button = Color3.fromHex("#14b84d"),
+    Icon = Color3.fromHex("#14e66f"),
+      Slider = Color3.fromHex("#3f9453"), -- Button
+    SliderThumb = Color3.fromHex("#07c339"), -- White
+})
 pcall(function()
     WindUI:SetTheme("Dark")
 end)
@@ -3023,6 +3035,18 @@ SettingsTab:Section({
 SettingsTab:Paragraph({
     Title = "Bypass Tester",
     Desc = "Click the button below to test if your executor supports the bypass methods.",
+})
+SettingsTab:Dropdown({
+    Flag = "ThemeChanger",
+    Title = "Theme Changer",
+    Values = {"Dark", "Light", "Rose", "Sky", "Plant", "Red", "Indigo", "Amber", "Violet", "Emerald", "Midnight", "Crimson", "michaels theme", "Cotton Candy", "Rainbow"},
+    Value = "Dark",
+    Callback = function(theme)
+        pcall(function()
+            WindUI:SetTheme(theme)
+        end)
+        notify("YBA Script", "Theme changed to " .. theme)
+    end
 })
 
 SettingsTab:Button({
